@@ -18,7 +18,6 @@ __pycache__/
 *.pyd
 .Python
 *.log
-*.txt
 data/skepticbench_full.json
 data/skepticbench_25.json
 data/skepticbench_new75.json
