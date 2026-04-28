@@ -8,6 +8,7 @@ dependencies = [
     "arxiv>=3.0.0",
     "ddgs>=9.14.1",
     "duckduckgo-search>=8.1.1",
+    "fastapi>=0.119.0",
     "google-genai>=1.73.1",
     "groq>=1.2.0",
     "langchain-community>=0.4.1",
@@ -16,4 +17,5 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "requests>=2.33.1",
     "streamlit>=1.56.0",
+    "uvicorn[standard]>=0.38.0",
 ]
