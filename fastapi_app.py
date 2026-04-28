@@ -12,16 +12,15 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from pipeline import run_pipeline
+from env_utils import load_env
 
 
-load_dotenv()
+load_env()
 
 
 def _parse_cors_origins() -> list[str]:
@@ -65,14 +64,6 @@ def _refresh_groq_clients(groq_api_key: str) -> None:
 class VerifyRequest(BaseModel):
     summary: str = Field(..., min_length=1, description="Summary text to fact-check")
     verbose: bool = Field(False, description="Include verbose pipeline prints on server logs")
-    groq_api_key: str | None = Field(
-        default=None,
-        description="Optional runtime Groq key override for this request",
-    )
-    gemini_api_key: str | None = Field(
-        default=None,
-        description="Optional runtime Gemini key override for this request",
-    )
 
 
 class VerifyResponse(BaseModel):
@@ -117,21 +108,20 @@ async def verify_summary(payload: VerifyRequest) -> VerifyResponse:
     if not summary:
         raise HTTPException(status_code=400, detail="`summary` cannot be empty.")
 
-    if payload.groq_api_key:
-        os.environ["GROQ_API_KEY"] = payload.groq_api_key.strip()
-        _refresh_groq_clients(os.environ["GROQ_API_KEY"])
-
-    if payload.gemini_api_key:
-        os.environ["GEMINI_API_KEY"] = payload.gemini_api_key.strip()
-
     if not os.getenv("GROQ_API_KEY"):
         raise HTTPException(
             status_code=400,
-            detail="GROQ_API_KEY is missing. Add it in .env or send groq_api_key in request body.",
+            detail="GROQ_API_KEY is missing. Add it in .env before starting the API.",
         )
+
+    # Ensure module-level Groq clients use the .env key.
+    _refresh_groq_clients(os.environ["GROQ_API_KEY"])
 
     started = time.perf_counter()
     try:
+        # Import lazily so app can still boot and expose clear health/errors.
+        from pipeline import run_pipeline
+
         result = await run_in_threadpool(run_pipeline, summary, payload.verbose)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {exc}") from exc
